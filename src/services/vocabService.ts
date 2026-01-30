@@ -1,6 +1,15 @@
 import type {VocabWord} from '../types';
+import {
+  getCachedWords,
+  setCachedWords,
+  isCacheValid,
+  addWordToCache,
+  getRandomCachedWord,
+} from '../store/vocabCache';
+import fallbackData from '../../assets/vocab_fallback.json';
 
 const VOCAB_API_URL = 'https://api.dictionaryapi.dev/api/v2/entries/en';
+const RANDOM_WORD_API_URL = 'https://random-word-api.herokuapp.com/word';
 
 // Fallback words for offline use
 const FALLBACK_WORDS: VocabWord[] = [
@@ -67,9 +76,88 @@ export function getRandomFallbackWord(): VocabWord {
 }
 
 export async function getWordOfTheHour(): Promise<VocabWord> {
-  // TODO: Implement fetching from remote API with caching
-  // For now, return a random fallback word
+  // Try to get a word from cache first if cache is valid
+  const cacheValid = await isCacheValid();
+  if (cacheValid) {
+    const cachedWord = await getRandomCachedWord();
+    if (cachedWord) {
+      return cachedWord;
+    }
+  }
+
+  // Try to fetch a fresh word from the remote API
+  const freshWord = await fetchRandomWord();
+  if (freshWord) {
+    await addWordToCache(freshWord);
+    return freshWord;
+  }
+
+  // Fall back to cached words even if cache is expired
+  const cachedWord = await getRandomCachedWord();
+  if (cachedWord) {
+    return cachedWord;
+  }
+
+  // Final fallback: use hardcoded words
   return getRandomFallbackWord();
+}
+
+export async function fetchRandomWord(): Promise<VocabWord | null> {
+  try {
+    const response = await fetch(RANDOM_WORD_API_URL);
+    if (!response.ok) {
+      return null;
+    }
+    const words = await response.json();
+    if (words && words.length > 0) {
+      const word = words[0];
+      return fetchWord(word);
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching random word:', error);
+    return null;
+  }
+}
+
+export async function refreshVocabCache(): Promise<boolean> {
+  try {
+    // Load fallback words into cache as a baseline
+    const fallbackWords: VocabWord[] = fallbackData.words;
+    await setCachedWords(fallbackWords);
+
+    // Try to fetch additional words from the API
+    const wordsToFetch = ['eloquent', 'resilient', 'serendipity', 'ephemeral', 'ubiquitous'];
+    const fetchPromises = wordsToFetch.map(word => fetchWord(word));
+    const results = await Promise.all(fetchPromises);
+
+    const validWords = results.filter((w): w is VocabWord => w !== null);
+    if (validWords.length > 0) {
+      // Merge with existing cache, avoiding duplicates
+      const existingCache = await getCachedWords();
+      const mergedWords = [...existingCache];
+      for (const word of validWords) {
+        const exists = mergedWords.some(
+          w => w.word.toLowerCase() === word.word.toLowerCase(),
+        );
+        if (!exists) {
+          mergedWords.push(word);
+        }
+      }
+      await setCachedWords(mergedWords);
+    }
+    return true;
+  } catch (error) {
+    console.error('Error refreshing vocab cache:', error);
+    return false;
+  }
+}
+
+export async function initializeVocabCache(): Promise<void> {
+  const cacheValid = await isCacheValid();
+  if (!cacheValid) {
+    await refreshVocabCache();
+  }
 }
 
 export function getFallbackWords(): VocabWord[] {

@@ -1,8 +1,11 @@
 export {
   fetchWord,
+  fetchRandomWord,
   getRandomFallbackWord,
   getWordOfTheHour,
   getFallbackWords,
+  refreshVocabCache,
+  initializeVocabCache,
 } from './vocabService';
 
 export {
