@@ -1,0 +1,64 @@
+{
+  "words": [
+    {
+      "word": "Ephemeral",
+      "definition": "lasting for a very short time; transitory",
+      "partOfSpeech": "adjective",
+      "example": "The ephemeral beauty of cherry blossoms."
+    },
+    {
+      "word": "Serendipity",
+      "definition": "the occurrence of events by chance in a happy or beneficial way",
+      "partOfSpeech": "noun",
+      "example": "Finding that book was pure serendipity."
+    },
+    {
+      "word": "Ubiquitous",
+      "definition": "present, appearing, or found everywhere",
+      "partOfSpeech": "adjective",
+      "example": "Smartphones have become ubiquitous in modern life."
+    },
+    {
+      "word": "Eloquent",
+      "definition": "fluent or persuasive in speaking or writing",
+      "partOfSpeech": "adjective",
+      "example": "Her eloquent speech moved the audience to tears."
+    },
+    {
+      "word": "Resilient",
+      "definition": "able to recover quickly from difficulties; tough",
+      "partOfSpeech": "adjective",
+      "example": "The community proved resilient in the face of adversity."
+    },
+    {
+      "word": "Mellifluous",
+      "definition": "sweet or musical; pleasant to hear",
+      "partOfSpeech": "adjective",
+      "example": "The singer's mellifluous voice filled the concert hall."
+    },
+    {
+      "word": "Perspicacious",
+      "definition": "having a ready insight into and understanding of things",
+      "partOfSpeech": "adjective",
+      "example": "A perspicacious judge of character."
+    },
+    {
+      "word": "Sanguine",
+      "definition": "optimistic or positive, especially in a difficult situation",
+      "partOfSpeech": "adjective",
+      "example": "He remained sanguine about the company's future."
+    },
+    {
+      "word": "Cacophony",
+      "definition": "a harsh discordant mixture of sounds",
+      "partOfSpeech": "noun",
+      "example": "The cacophony of car horns during rush hour."
+    },
+    {
+      "word": "Ineffable",
+      "definition": "too great or extreme to be expressed or described in words",
+      "partOfSpeech": "adjective",
+      "example": "The ineffable beauty of the sunset."
+    }
+  ]
+}
