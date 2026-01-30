@@ -1,17 +1,35 @@
-import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import React, {useState} from 'react';
+import {View, Text, StyleSheet, TouchableOpacity, Alert} from 'react-native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../types';
+import {pickAndPersistImage} from '../services/imageService';
 
 type ImagePickerScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ImagePicker'>;
 };
 
 export function ImagePickerScreen({navigation}: ImagePickerScreenProps) {
-  const handleSelectImage = () => {
-    // TODO: Implement actual image picker
-    // For now, navigate to Preview with a placeholder
-    navigation.navigate('Preview', {imageUri: 'placeholder'});
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSelectImage = async () => {
+    if (isLoading) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await pickAndPersistImage();
+
+      if (result.success && result.uri) {
+        navigation.navigate('Preview', {imageUri: result.uri});
+      } else if (result.error && result.error !== 'User cancelled image picker') {
+        Alert.alert('Error', result.error);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOpenSettings = () => {
@@ -36,7 +54,9 @@ export function ImagePickerScreen({navigation}: ImagePickerScreenProps) {
           onPress={handleSelectImage}
           testID="image-picker-button">
           <Text style={styles.pickerIcon}>📷</Text>
-          <Text style={styles.pickerText}>Tap to select a photo</Text>
+          <Text style={styles.pickerText}>
+            {isLoading ? 'Opening gallery...' : 'Tap to select a photo'}
+          </Text>
           <Text style={styles.pickerSubtext}>
             Choose a photo to use as your wallpaper background
           </Text>

@@ -1,8 +1,9 @@
-import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
+import React, {useState} from 'react';
+import {View, Text, StyleSheet, TouchableOpacity, Image, Alert} from 'react-native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RouteProp} from '@react-navigation/native';
 import type {RootStackParamList} from '../types';
+import {setSelectedImage} from '../store/settings';
 
 type PreviewScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Preview'>;
@@ -11,10 +12,26 @@ type PreviewScreenProps = {
 
 export function PreviewScreen({navigation, route}: PreviewScreenProps) {
   const {imageUri} = route.params;
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSetWallpaper = () => {
-    // TODO: Implement wallpaper setting via native module
-    console.log('Setting wallpaper with image:', imageUri);
+  const handleSetWallpaper = async () => {
+    if (isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await setSelectedImage(imageUri);
+      Alert.alert(
+        'Success',
+        'Your wallpaper image has been saved! The app will use this image for generating vocabulary wallpapers.',
+        [{text: 'OK'}],
+      );
+    } catch {
+      Alert.alert('Error', 'Failed to save wallpaper image. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleChooseAnother = () => {
@@ -65,7 +82,9 @@ export function PreviewScreen({navigation, route}: PreviewScreenProps) {
           style={styles.primaryButton}
           onPress={handleSetWallpaper}
           testID="set-wallpaper-button">
-          <Text style={styles.primaryButtonText}>Set Wallpaper</Text>
+          <Text style={styles.primaryButtonText}>
+            {isSaving ? 'Saving...' : 'Set Wallpaper'}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
