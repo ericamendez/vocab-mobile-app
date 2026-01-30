@@ -1,9 +1,19 @@
-import React, {useState} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Image, Alert} from 'react-native';
+import React, {useState, useEffect, useCallback} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RouteProp} from '@react-navigation/native';
-import type {RootStackParamList} from '../types';
-import {setSelectedImage} from '../store/settings';
+import type {RootStackParamList, VocabWord} from '../types';
+import {setSelectedImage, getSettings} from '../store/settings';
+import {getWordOfTheHour} from '../services/vocabService';
+import {VocabOverlay} from '../components';
 
 type PreviewScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Preview'>;
@@ -13,6 +23,43 @@ type PreviewScreenProps = {
 export function PreviewScreen({navigation, route}: PreviewScreenProps) {
   const {imageUri} = route.params;
   const [isSaving, setIsSaving] = useState(false);
+  const [vocabWord, setVocabWord] = useState<VocabWord | null>(null);
+  const [isLoadingWord, setIsLoadingWord] = useState(true);
+  const [textColor, setTextColor] = useState('#ffffff');
+  const [fontSize, setFontSize] = useState(28);
+
+  const loadVocabWord = useCallback(async () => {
+    setIsLoadingWord(true);
+    try {
+      const word = await getWordOfTheHour();
+      setVocabWord(word);
+    } catch (error) {
+      console.error('Error loading vocab word:', error);
+      // Fallback word if loading fails
+      setVocabWord({
+        word: 'Ephemeral',
+        definition: 'lasting for a very short time; transitory',
+        partOfSpeech: 'adjective',
+      });
+    } finally {
+      setIsLoadingWord(false);
+    }
+  }, []);
+
+  const loadSettings = useCallback(async () => {
+    try {
+      const settings = await getSettings();
+      setTextColor(settings.textColor);
+      setFontSize(settings.fontSize);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadVocabWord();
+    loadSettings();
+  }, [loadVocabWord, loadSettings]);
 
   const handleSetWallpaper = async () => {
     if (isSaving) {
@@ -63,12 +110,19 @@ export function PreviewScreen({navigation, route}: PreviewScreenProps) {
             resizeMode="cover"
           />
         )}
-        <View style={styles.wordOverlay}>
-          <Text style={styles.word}>Ephemeral</Text>
-          <Text style={styles.definition}>
-            lasting for a very short time; transitory
-          </Text>
-        </View>
+        {isLoadingWord ? (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="small" color="#ffffff" />
+            <Text style={styles.loadingText}>Loading word...</Text>
+          </View>
+        ) : vocabWord ? (
+          <VocabOverlay
+            word={vocabWord}
+            textColor={textColor}
+            fontSize={fontSize}
+            testID="vocab-overlay"
+          />
+        ) : null}
       </View>
 
       <View style={styles.buttonContainer}>
@@ -139,7 +193,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  wordOverlay: {
+  loadingOverlay: {
     position: 'absolute',
     bottom: 80,
     left: 20,
@@ -147,17 +201,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     padding: 16,
     borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
-  word: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  loadingText: {
     color: '#ffffff',
-    marginBottom: 8,
-  },
-  definition: {
     fontSize: 16,
-    color: '#e0e0e0',
-    lineHeight: 22,
   },
   buttonContainer: {
     flexDirection: 'row',
