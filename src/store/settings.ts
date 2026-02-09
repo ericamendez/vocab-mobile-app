@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS: Settings = {
   updateFrequency: 'hourly',
   autoUpdateEnabled: false,
   textColor: '#ffffff',
-  fontSize: 24,
+  fontSize: 1.0,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -31,6 +31,11 @@ export async function getSettings(): Promise<Settings> {
       if (parsed.selectedImageUri && !parsed.selectedImageUris) {
         parsed.selectedImageUris = [parsed.selectedImageUri];
         delete parsed.selectedImageUri;
+      }
+      // Migration: convert old absolute fontSize (24) to multiplier format (1.0)
+      // Multipliers should be between 0.5 and 2.0, old values were ~24
+      if (parsed.fontSize && parsed.fontSize > 2) {
+        parsed.fontSize = 1.0;
       }
       return {...DEFAULT_SETTINGS, ...parsed};
     }

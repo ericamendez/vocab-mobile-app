@@ -42,7 +42,7 @@ const mockSettings = {
   selectedImageUri: null,
   updateFrequency: 'hourly' as const,
   textColor: '#ffffff',
-  fontSize: 24,
+  fontSize: 1.0,
 };
 
 describe('PreviewScreen', () => {

@@ -21,7 +21,7 @@ describe('settings store', () => {
       expect(settings.selectedImageUri).toBeNull();
       expect(settings.updateFrequency).toBe('hourly');
       expect(settings.textColor).toBe('#ffffff');
-      expect(settings.fontSize).toBe(24);
+      expect(settings.fontSize).toBe(1.0);
     });
 
     it('returns stored settings merged with defaults', async () => {

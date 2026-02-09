@@ -171,18 +171,24 @@ class VocabWallpaperWorker(
             }
             canvas.drawRect(0f, bgTop, width, bgBottom, bgPaint)
 
-            // Calculate font sizes based on available width (not height)
-            // This ensures text always fits horizontally
-            val wordSize = availableWidth * 0.08f * fontSizeMultiplier
+            // Calculate base font sizes
+            val baseWordSize = availableWidth * 0.08f * fontSizeMultiplier
             val posSize = availableWidth * 0.04f * fontSizeMultiplier
             val defSize = availableWidth * 0.045f * fontSizeMultiplier
 
-            // Draw word
+            // Draw word - scale down font if word is too long
             val wordPaint = Paint().apply {
                 color = parsedTextColor
-                textSize = wordSize
+                textSize = baseWordSize
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 isAntiAlias = true
+            }
+            
+            // Measure the word and reduce font size if it doesn't fit
+            var wordSize = baseWordSize
+            while (wordPaint.measureText(vocabWord.word) > availableWidth && wordSize > baseWordSize * 0.4f) {
+                wordSize -= baseWordSize * 0.05f
+                wordPaint.textSize = wordSize
             }
             
             // Start text at top of background area with some padding
