@@ -17,7 +17,10 @@ import {
 import {
   triggerWallpaperUpdate,
   isSchedulerSupported,
+  setSchedulerImages,
+  setSchedulerVocab,
 } from '../services/schedulerService';
+import {getRandomWords} from '../services/vocabService';
 import type {UpdateInterval} from '../services/schedulerService';
 
 type SettingsScreenProps = {
@@ -87,15 +90,31 @@ export function SettingsScreen({navigation}: SettingsScreenProps) {
   const handleTestNow = useCallback(async () => {
     setIsSaving(true);
     try {
+      // First, ensure images and vocab are synced to native
+      const settings = await getSettings();
+      
+      if (!settings.selectedImageUris || settings.selectedImageUris.length === 0) {
+        Alert.alert('No Images', 'Please add some photos first before testing.');
+        return;
+      }
+
+      // Sync images to native scheduler
+      await setSchedulerImages(settings.selectedImageUris);
+      
+      // Sync vocab words to native scheduler
+      const words = await getRandomWords(50);
+      await setSchedulerVocab(words);
+      
+      // Now trigger the update
       const success = await triggerWallpaperUpdate();
       if (success) {
-        Alert.alert('Success', 'Wallpaper update triggered! Check your lock screen.');
+        Alert.alert('Success', 'Wallpaper update triggered! Check your lock screen in a few seconds.');
       } else {
         Alert.alert('Error', 'Failed to trigger wallpaper update');
       }
     } catch (error) {
       console.error('Error triggering update:', error);
-      Alert.alert('Error', 'Failed to trigger wallpaper update');
+      Alert.alert('Error', `Failed to trigger wallpaper update: ${error}`);
     } finally {
       setIsSaving(false);
     }

@@ -24,14 +24,16 @@ class SchedulerModule(reactContext: ReactApplicationContext) : ReactContextBaseJ
     @ReactMethod
     fun startScheduler(intervalMinutes: Int, promise: Promise) {
         try {
-            val workManager = WorkManager.getInstance(reactApplicationContext)
+            val context = reactApplicationContext.applicationContext
+            val workManager = WorkManager.getInstance(context)
 
             // Cancel any existing work
             workManager.cancelUniqueWork(WORK_NAME)
 
-            // Create periodic work request
+            // Create periodic work request (minimum interval is 15 minutes)
+            val actualInterval = maxOf(intervalMinutes, 15)
             val workRequest = PeriodicWorkRequestBuilder<VocabWallpaperWorker>(
-                intervalMinutes.toLong(), TimeUnit.MINUTES
+                actualInterval.toLong(), TimeUnit.MINUTES
             )
                 .setConstraints(
                     Constraints.Builder()
@@ -46,8 +48,10 @@ class SchedulerModule(reactContext: ReactApplicationContext) : ReactContextBaseJ
                 workRequest
             )
 
+            android.util.Log.d("SchedulerModule", "Scheduler started with interval: $actualInterval minutes")
             promise.resolve(true)
         } catch (e: Exception) {
+            android.util.Log.e("SchedulerModule", "Error starting scheduler", e)
             promise.reject("SCHEDULER_ERROR", e.message, e)
         }
     }
@@ -55,10 +59,13 @@ class SchedulerModule(reactContext: ReactApplicationContext) : ReactContextBaseJ
     @ReactMethod
     fun stopScheduler(promise: Promise) {
         try {
-            val workManager = WorkManager.getInstance(reactApplicationContext)
+            val context = reactApplicationContext.applicationContext
+            val workManager = WorkManager.getInstance(context)
             workManager.cancelUniqueWork(WORK_NAME)
+            android.util.Log.d("SchedulerModule", "Scheduler stopped")
             promise.resolve(true)
         } catch (e: Exception) {
+            android.util.Log.e("SchedulerModule", "Error stopping scheduler", e)
             promise.reject("SCHEDULER_ERROR", e.message, e)
         }
     }
@@ -66,14 +73,17 @@ class SchedulerModule(reactContext: ReactApplicationContext) : ReactContextBaseJ
     @ReactMethod
     fun triggerNow(promise: Promise) {
         try {
-            val workManager = WorkManager.getInstance(reactApplicationContext)
+            val context = reactApplicationContext.applicationContext
+            val workManager = WorkManager.getInstance(context)
             
             val workRequest = OneTimeWorkRequestBuilder<VocabWallpaperWorker>()
                 .build()
 
             workManager.enqueue(workRequest)
+            android.util.Log.d("SchedulerModule", "Work enqueued successfully")
             promise.resolve(true)
         } catch (e: Exception) {
+            android.util.Log.e("SchedulerModule", "Error triggering work", e)
             promise.reject("SCHEDULER_ERROR", e.message, e)
         }
     }
@@ -130,10 +140,11 @@ class SchedulerModule(reactContext: ReactApplicationContext) : ReactContextBaseJ
     @ReactMethod
     fun getStatus(promise: Promise) {
         try {
-            val workManager = WorkManager.getInstance(reactApplicationContext)
+            val context = reactApplicationContext.applicationContext
+            val workManager = WorkManager.getInstance(context)
             val workInfo = workManager.getWorkInfosForUniqueWork(WORK_NAME).get()
 
-            val prefs = reactApplicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val screenWakeEnabled = prefs.getBoolean(KEY_SCREEN_WAKE_ENABLED, false)
 
             val result = Arguments.createMap()
@@ -149,6 +160,7 @@ class SchedulerModule(reactContext: ReactApplicationContext) : ReactContextBaseJ
 
             promise.resolve(result)
         } catch (e: Exception) {
+            android.util.Log.e("SchedulerModule", "Error getting status", e)
             promise.reject("SCHEDULER_ERROR", e.message, e)
         }
     }

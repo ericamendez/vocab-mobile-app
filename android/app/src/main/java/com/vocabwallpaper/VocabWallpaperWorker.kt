@@ -139,63 +139,80 @@ class VocabWallpaperWorker(
             val canvas = Canvas(mutableBitmap)
             val width = mutableBitmap.width.toFloat()
             val height = mutableBitmap.height.toFloat()
+            
+            // Use smaller of width/height to scale text proportionally
+            val scale = minOf(width, height)
 
-            // Draw semi-transparent background for text
+            // Draw semi-transparent background for text (lower portion of screen)
             val bgPaint = Paint().apply {
-                color = Color.parseColor("#B3000000") // 70% black
+                color = Color.parseColor("#CC000000") // 80% black for better readability
                 style = Paint.Style.FILL
             }
-            val bgTop = height * 0.65f
-            val bgBottom = height * 0.95f
+            val bgTop = height * 0.72f
+            val bgBottom = height
             canvas.drawRect(0f, bgTop, width, bgBottom, bgPaint)
 
-            // Draw word
+            // Padding from edges
+            val paddingX = width * 0.04f
+
+            // Draw word - smaller font
             val wordPaint = Paint().apply {
                 color = Color.WHITE
-                textSize = width * 0.08f
+                textSize = scale * 0.05f  // Reduced from 0.08f
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 isAntiAlias = true
             }
-            val wordY = bgTop + (bgBottom - bgTop) * 0.25f
-            canvas.drawText(vocabWord.word, width * 0.05f, wordY, wordPaint)
+            var currentY = bgTop + scale * 0.06f
+            canvas.drawText(vocabWord.word, paddingX, currentY, wordPaint)
 
             // Draw part of speech if available
-            var currentY = wordY
             if (!vocabWord.partOfSpeech.isNullOrEmpty()) {
                 val posPaint = Paint().apply {
-                    color = Color.parseColor("#AAAAAA")
-                    textSize = width * 0.04f
+                    color = Color.parseColor("#CCCCCC")
+                    textSize = scale * 0.025f  // Reduced from 0.04f
                     typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
                     isAntiAlias = true
                 }
-                currentY += width * 0.06f
-                canvas.drawText("(${vocabWord.partOfSpeech})", width * 0.05f, currentY, posPaint)
+                currentY += scale * 0.035f
+                canvas.drawText("(${vocabWord.partOfSpeech})", paddingX, currentY, posPaint)
             }
 
-            // Draw definition (wrapped if needed)
+            // Draw definition (wrapped to fit screen width)
             val defPaint = Paint().apply {
                 color = Color.WHITE
-                textSize = width * 0.045f
+                textSize = scale * 0.028f  // Reduced from 0.045f
                 isAntiAlias = true
             }
-            currentY += width * 0.07f
+            currentY += scale * 0.045f
             
-            // Simple text wrapping
-            val maxWidth = width * 0.9f
+            // Text wrapping with proper line height
+            val maxWidth = width - (paddingX * 2)
+            val lineHeight = scale * 0.035f
             val words = vocabWord.definition.split(" ")
             var line = ""
+            var linesDrawn = 0
+            val maxLines = 4  // Limit lines to prevent overflow
+            
             for (word in words) {
                 val testLine = if (line.isEmpty()) word else "$line $word"
                 if (defPaint.measureText(testLine) > maxWidth) {
-                    canvas.drawText(line, width * 0.05f, currentY, defPaint)
-                    currentY += width * 0.055f
+                    if (linesDrawn < maxLines) {
+                        canvas.drawText(line, paddingX, currentY, defPaint)
+                        currentY += lineHeight
+                        linesDrawn++
+                    }
                     line = word
                 } else {
                     line = testLine
                 }
             }
-            if (line.isNotEmpty()) {
-                canvas.drawText(line, width * 0.05f, currentY, defPaint)
+            // Draw remaining text
+            if (line.isNotEmpty() && linesDrawn < maxLines) {
+                if (linesDrawn == maxLines - 1 && words.size > 10) {
+                    // Truncate with ellipsis if we're at max lines
+                    line = line.take(40) + "..."
+                }
+                canvas.drawText(line, paddingX, currentY, defPaint)
             }
 
             return mutableBitmap
