@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {StatusBar, useColorScheme} from 'react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {AppNavigator} from './src/navigation';
-import {getSettings} from './src/store';
+import {getSettings, initializeScheduler} from './src/store';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -17,6 +17,9 @@ function App() {
     try {
       const settings = await getSettings();
       setIsOnboardingComplete(settings.isOnboardingComplete);
+      
+      // Initialize scheduler if auto-update was enabled
+      await initializeScheduler();
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {

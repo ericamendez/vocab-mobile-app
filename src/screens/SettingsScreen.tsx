@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -6,23 +6,114 @@ import {
   TouchableOpacity,
   Switch,
   ScrollView,
+  Alert,
 } from 'react-native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../types';
+import {
+  getSettings,
+  setAutoUpdate,
+} from '../store/settings';
+import {
+  triggerWallpaperUpdate,
+  isSchedulerSupported,
+} from '../services/schedulerService';
+import type {UpdateInterval} from '../services/schedulerService';
 
 type SettingsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 };
 
 export function SettingsScreen({navigation}: SettingsScreenProps) {
-  const [autoUpdate, setAutoUpdate] = useState(true);
-  const [updateFrequency, setUpdateFrequency] = useState<'hourly' | 'daily'>(
-    'hourly',
-  );
+  const [autoUpdate, setAutoUpdateState] = useState(false);
+  const [updateFrequency, setUpdateFrequency] = useState<UpdateInterval>('hourly');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const settings = await getSettings();
+      setAutoUpdateState(settings.autoUpdateEnabled);
+      setUpdateFrequency(settings.updateFrequency);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAutoUpdateChange = useCallback(async (enabled: boolean) => {
+    setIsSaving(true);
+    setAutoUpdateState(enabled);
+    try {
+      await setAutoUpdate(enabled, updateFrequency);
+    } catch (error) {
+      console.error('Error updating auto-update setting:', error);
+      setAutoUpdateState(!enabled); // Revert on error
+      Alert.alert('Error', 'Failed to update settings');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [updateFrequency]);
+
+  const handleFrequencyChange = useCallback(async (frequency: UpdateInterval) => {
+    setIsSaving(true);
+    const previousFrequency = updateFrequency;
+    setUpdateFrequency(frequency);
+    try {
+      if (autoUpdate) {
+        await setAutoUpdate(true, frequency);
+      } else {
+        // Just save the preference without starting scheduler
+        await setAutoUpdate(false, frequency);
+        // Re-enable since we want it on
+        setAutoUpdateState(true);
+        await setAutoUpdate(true, frequency);
+      }
+    } catch (error) {
+      console.error('Error updating frequency:', error);
+      setUpdateFrequency(previousFrequency);
+      Alert.alert('Error', 'Failed to update frequency');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [autoUpdate, updateFrequency]);
+
+  const handleTestNow = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const success = await triggerWallpaperUpdate();
+      if (success) {
+        Alert.alert('Success', 'Wallpaper update triggered! Check your lock screen.');
+      } else {
+        Alert.alert('Error', 'Failed to trigger wallpaper update');
+      }
+    } catch (error) {
+      console.error('Error triggering update:', error);
+      Alert.alert('Error', 'Failed to trigger wallpaper update');
+    } finally {
+      setIsSaving(false);
+    }
+  }, []);
 
   const handleBack = () => {
     navigation.goBack();
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  const schedulerSupported = isSchedulerSupported();
 
   return (
     <View style={styles.container}>
@@ -50,22 +141,47 @@ export function SettingsScreen({navigation}: SettingsScreenProps) {
             </View>
             <Switch
               value={autoUpdate}
-              onValueChange={setAutoUpdate}
+              onValueChange={handleAutoUpdateChange}
               trackColor={{false: '#3a3a5e', true: '#4a90d9'}}
               thumbColor="#ffffff"
               testID="auto-update-switch"
+              disabled={isSaving || !schedulerSupported}
             />
           </View>
+
+          {!schedulerSupported && (
+            <Text style={styles.warningText}>
+              Auto-update is only available on Android
+            </Text>
+          )}
 
           <Text style={styles.frequencyLabel}>Update Frequency</Text>
           <View style={styles.frequencyContainer}>
             <TouchableOpacity
               style={[
                 styles.frequencyOption,
+                updateFrequency === 'on_screen_wake' && styles.frequencyOptionActive,
+              ]}
+              onPress={() => handleFrequencyChange('on_screen_wake')}
+              testID="screen-wake-option"
+              disabled={isSaving}>
+              <Text
+                style={[
+                  styles.frequencyText,
+                  updateFrequency === 'on_screen_wake' && styles.frequencyTextActive,
+                ]}>
+                On Wake
+              </Text>
+              <Text style={styles.frequencySubtext}>Testing</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.frequencyOption,
                 updateFrequency === 'hourly' && styles.frequencyOptionActive,
               ]}
-              onPress={() => setUpdateFrequency('hourly')}
-              testID="hourly-option">
+              onPress={() => handleFrequencyChange('hourly')}
+              testID="hourly-option"
+              disabled={isSaving}>
               <Text
                 style={[
                   styles.frequencyText,
@@ -79,8 +195,9 @@ export function SettingsScreen({navigation}: SettingsScreenProps) {
                 styles.frequencyOption,
                 updateFrequency === 'daily' && styles.frequencyOptionActive,
               ]}
-              onPress={() => setUpdateFrequency('daily')}
-              testID="daily-option">
+              onPress={() => handleFrequencyChange('daily')}
+              testID="daily-option"
+              disabled={isSaving}>
               <Text
                 style={[
                   styles.frequencyText,
@@ -90,6 +207,16 @@ export function SettingsScreen({navigation}: SettingsScreenProps) {
               </Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={[styles.testButton, isSaving && styles.testButtonDisabled]}
+            onPress={handleTestNow}
+            testID="test-now-button"
+            disabled={isSaving || !schedulerSupported}>
+            <Text style={styles.testButtonText}>
+              {isSaving ? 'Please wait...' : 'Test Now'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -126,6 +253,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a2e',
+  },
+  loadingText: {
+    color: '#ffffff',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 100,
   },
   header: {
     flexDirection: 'row',
@@ -199,12 +332,12 @@ const styles = StyleSheet.create({
   },
   frequencyContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   frequencyOption: {
     flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     backgroundColor: '#2a2a4e',
     borderRadius: 8,
     alignItems: 'center',
@@ -213,11 +346,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#4a90d9',
   },
   frequencyText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#a0a0a0',
   },
   frequencyTextActive: {
     color: '#ffffff',
     fontWeight: '600',
+  },
+  frequencySubtext: {
+    fontSize: 10,
+    color: '#7a7a9a',
+    marginTop: 2,
+  },
+  testButton: {
+    backgroundColor: '#4a90d9',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  testButtonDisabled: {
+    backgroundColor: '#3a3a5e',
+  },
+  testButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#ff6b6b',
+    marginTop: 4,
   },
 });

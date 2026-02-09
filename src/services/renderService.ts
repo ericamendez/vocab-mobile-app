@@ -12,34 +12,18 @@ export interface RenderedWallpaper {
   height: number;
 }
 
-const DEFAULT_OPTIONS: RenderOptions = {
+export const DEFAULT_RENDER_OPTIONS: RenderOptions = {
   textColor: '#ffffff',
   fontSize: 24,
   backgroundColor: 'rgba(0, 0, 0, 0.7)',
 };
 
-export async function renderWordOnImage(
-  imageUri: string,
-  word: VocabWord,
-  options: Partial<RenderOptions> = {},
-): Promise<RenderedWallpaper> {
-  const mergedOptions = {...DEFAULT_OPTIONS, ...options};
-
-  // TODO: Implement actual image rendering using react-native-skia or similar
-  // This will overlay the word and definition onto the image
-  console.log('Rendering word on image:', {
-    imageUri,
-    word,
-    options: mergedOptions,
-  });
-
-  // For now, return a placeholder result
-  return {
-    uri: imageUri,
-    width: 1080,
-    height: 1920,
-  };
-}
+/**
+ * Note: Actual wallpaper rendering with text overlay is done natively
+ * in VocabWallpaperWorker.kt for performance and background execution.
+ * 
+ * This service provides utilities for the preview screen and configuration.
+ */
 
 export function calculateTextPosition(
   imageHeight: number,
@@ -49,5 +33,29 @@ export function calculateTextPosition(
   return {
     x: 20,
     y: imageHeight * 0.7,
+  };
+}
+
+export function formatVocabForDisplay(word: VocabWord): {
+  title: string;
+  subtitle: string;
+  body: string;
+} {
+  return {
+    title: word.word,
+    subtitle: word.partOfSpeech ? `(${word.partOfSpeech})` : '',
+    body: word.definition,
+  };
+}
+
+/**
+ * Generate overlay style for preview component
+ */
+export function getOverlayStyle(options: Partial<RenderOptions> = {}) {
+  const merged = {...DEFAULT_RENDER_OPTIONS, ...options};
+  return {
+    backgroundColor: merged.backgroundColor,
+    textColor: merged.textColor,
+    fontSize: merged.fontSize,
   };
 }

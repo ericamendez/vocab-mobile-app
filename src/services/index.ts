@@ -6,11 +6,14 @@ export {
   getFallbackWords,
   refreshVocabCache,
   initializeVocabCache,
+  getRandomWords,
 } from './vocabService';
 
 export {
-  renderWordOnImage,
   calculateTextPosition,
+  formatVocabForDisplay,
+  getOverlayStyle,
+  DEFAULT_RENDER_OPTIONS,
   type RenderOptions,
   type RenderedWallpaper,
 } from './renderService';
@@ -19,6 +22,7 @@ export {
   setWallpaper,
   isWallpaperSupported,
   getWallpaperCapabilities,
+  getMinimumWallpaperSize,
   type WallpaperTarget,
   type WallpaperResult,
 } from './wallpaperService';
@@ -26,9 +30,14 @@ export {
 export {
   startScheduler,
   stopScheduler,
-  updateSchedulerInterval,
+  triggerWallpaperUpdate,
+  setSchedulerImages,
+  setSchedulerVocab,
   getSchedulerStatus,
   isSchedulerSupported,
+  enableScreenWakeMode,
+  disableScreenWakeMode,
   type UpdateInterval,
   type SchedulerConfig,
+  type SchedulerStatus,
 } from './schedulerService';

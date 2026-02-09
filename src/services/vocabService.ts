@@ -163,3 +163,32 @@ export async function initializeVocabCache(): Promise<void> {
 export function getFallbackWords(): VocabWord[] {
   return [...FALLBACK_WORDS];
 }
+
+export async function getRandomWords(count: number): Promise<VocabWord[]> {
+  // First try to get words from cache
+  const cachedWords = await getCachedWords();
+  
+  if (cachedWords.length >= count) {
+    // Shuffle and return requested count
+    const shuffled = [...cachedWords].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
+  }
+
+  // Combine cached words with fallback words
+  const fallbackWords: VocabWord[] = fallbackData.words || FALLBACK_WORDS;
+  const allWords = [...cachedWords];
+  
+  // Add fallback words that aren't already in cache
+  for (const word of fallbackWords) {
+    const exists = allWords.some(
+      w => w.word.toLowerCase() === word.word.toLowerCase(),
+    );
+    if (!exists) {
+      allWords.push(word);
+    }
+  }
+
+  // Shuffle and return
+  const shuffled = allWords.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}

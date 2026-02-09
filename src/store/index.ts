@@ -2,8 +2,12 @@ export {
   getSettings,
   saveSettings,
   completeOnboarding,
-  setSelectedImage,
+  setSelectedImages,
+  addSelectedImage,
+  removeSelectedImage,
+  setAutoUpdate,
   clearSettings,
+  initializeScheduler,
 } from './settings';
 
 export {

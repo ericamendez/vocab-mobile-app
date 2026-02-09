@@ -14,8 +14,9 @@ export interface VocabWord {
 
 export interface Settings {
   isOnboardingComplete: boolean;
-  selectedImageUri: string | null;
-  updateFrequency: 'hourly' | 'daily';
+  selectedImageUris: string[];
+  updateFrequency: 'on_screen_wake' | 'hourly' | 'daily';
+  autoUpdateEnabled: boolean;
   textColor: string;
   fontSize: number;
 }
