@@ -3,7 +3,7 @@ import {
   ImagePickerResponse,
   ImageLibraryOptions,
 } from 'react-native-image-picker';
-import {setSelectedImage, getSettings} from '../store/settings';
+import {getSettings} from '../store/settings';
 
 export interface ImagePickerResult {
   success: boolean;
@@ -55,17 +55,12 @@ export async function pickImage(): Promise<ImagePickerResult> {
   });
 }
 
+// Renamed: just picks image, persistence handled by caller
 export async function pickAndPersistImage(): Promise<ImagePickerResult> {
-  const result = await pickImage();
-
-  if (result.success && result.uri) {
-    await setSelectedImage(result.uri);
-  }
-
-  return result;
+  return pickImage();
 }
 
-export async function getPersistedImageUri(): Promise<string | null> {
+export async function getPersistedImageUris(): Promise<string[]> {
   const settings = await getSettings();
-  return settings.selectedImageUri;
+  return settings.selectedImageUris || [];
 }

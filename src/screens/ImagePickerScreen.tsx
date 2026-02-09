@@ -63,8 +63,9 @@ export function ImagePickerScreen({navigation}: ImagePickerScreenProps) {
       } else if (result.error && result.error !== 'User cancelled image picker') {
         Alert.alert('Error', result.error);
       }
-    } catch {
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Error', `Failed to pick image: ${error}`);
     } finally {
       setIsLoading(false);
     }
