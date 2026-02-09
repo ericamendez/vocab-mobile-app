@@ -1,4 +1,5 @@
 ![Lockscreen screenshots](assets/lockscreen.png)
+![App View](assets/app.png)
 
 # Getting Started
 
