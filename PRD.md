@@ -74,9 +74,9 @@ flowchart TD
 
 ## Tasks
 
-- [ ] Scaffold React Native app shell and baseline screens
-- [ ] Implement image picker and persist selected wallpaper images
-- [ ] Build vocab fetch service with remote API + local fallback cache
-- [ ] Render vocab word/definition overlay onto selected images
+- [x] Scaffold React Native app shell and baseline screens
+- [x] Implement image picker and persist selected wallpaper images
+- [x] Build vocab fetch service with remote API + local fallback cache
+- [x] Render vocab word/definition overlay onto selected images
 - [ ] Add Android native module for lock screen wallpaper updates
 - [ ] Schedule hourly updates via WorkManager and wire settings UI
