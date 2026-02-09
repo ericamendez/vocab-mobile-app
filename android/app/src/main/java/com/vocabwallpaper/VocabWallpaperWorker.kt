@@ -142,9 +142,18 @@ class VocabWallpaperWorker(
 
             if (originalBitmap == null) return null
 
-            // Create mutable copy for drawing
-            val mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+            // Get screen dimensions to properly size the wallpaper
+            val displayMetrics = applicationContext.resources.displayMetrics
+            val screenWidth = displayMetrics.widthPixels
+            val screenHeight = displayMetrics.heightPixels
+            
+            // Scale and crop the bitmap to fit the screen (center crop)
+            val scaledBitmap = centerCropBitmap(originalBitmap, screenWidth, screenHeight)
             originalBitmap.recycle()
+
+            // Create mutable copy for drawing
+            val mutableBitmap = scaledBitmap.copy(Bitmap.Config.ARGB_8888, true)
+            scaledBitmap.recycle()
 
             val canvas = Canvas(mutableBitmap)
             val width = mutableBitmap.width.toFloat()
@@ -285,5 +294,40 @@ class VocabWallpaperWorker(
         val green = Color.green(color)
         val blue = Color.blue(color)
         return Color.argb(alpha, red, green, blue)
+    }
+
+    private fun centerCropBitmap(source: Bitmap, targetWidth: Int, targetHeight: Int): Bitmap {
+        val sourceWidth = source.width
+        val sourceHeight = source.height
+        
+        // Calculate the scale to fill the target dimensions (center crop)
+        val scaleX = targetWidth.toFloat() / sourceWidth
+        val scaleY = targetHeight.toFloat() / sourceHeight
+        val scale = maxOf(scaleX, scaleY)
+        
+        val scaledWidth = (sourceWidth * scale).toInt()
+        val scaledHeight = (sourceHeight * scale).toInt()
+        
+        // Scale the bitmap
+        val scaledBitmap = Bitmap.createScaledBitmap(source, scaledWidth, scaledHeight, true)
+        
+        // Calculate crop offsets to center the image
+        val cropX = (scaledWidth - targetWidth) / 2
+        val cropY = (scaledHeight - targetHeight) / 2
+        
+        // Crop to target dimensions
+        val croppedBitmap = Bitmap.createBitmap(
+            scaledBitmap,
+            maxOf(0, cropX),
+            maxOf(0, cropY),
+            minOf(targetWidth, scaledWidth),
+            minOf(targetHeight, scaledHeight)
+        )
+        
+        if (scaledBitmap != croppedBitmap) {
+            scaledBitmap.recycle()
+        }
+        
+        return croppedBitmap
     }
 }
