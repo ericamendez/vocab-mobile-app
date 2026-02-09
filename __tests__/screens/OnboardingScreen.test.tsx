@@ -1,6 +1,11 @@
 import React from 'react';
-import {render, fireEvent} from '@testing-library/react-native';
+import {render, fireEvent, waitFor} from '@testing-library/react-native';
 import {OnboardingScreen} from '../../src/screens/OnboardingScreen';
+import {completeOnboarding} from '../../src/store';
+
+jest.mock('../../src/store', () => ({
+  completeOnboarding: jest.fn().mockResolvedValue(undefined),
+}));
 
 const mockNavigate = jest.fn();
 const mockReplace = jest.fn();
@@ -46,13 +51,16 @@ describe('OnboardingScreen', () => {
     expect(getByTestId('get-started-button')).toBeTruthy();
   });
 
-  it('navigates to ImagePicker when get started is pressed', () => {
+  it('completes onboarding and navigates to ImagePicker when get started is pressed', async () => {
     const {getByTestId} = render(
       <OnboardingScreen navigation={mockNavigation} />,
     );
 
     fireEvent.press(getByTestId('get-started-button'));
 
-    expect(mockReplace).toHaveBeenCalledWith('ImagePicker');
+    await waitFor(() => {
+      expect(completeOnboarding).toHaveBeenCalled();
+      expect(mockReplace).toHaveBeenCalledWith('ImagePicker');
+    });
   });
 });

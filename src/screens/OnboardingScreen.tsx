@@ -2,13 +2,15 @@ import React from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../types';
+import {completeOnboarding} from '../store';
 
 type OnboardingScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
 };
 
 export function OnboardingScreen({navigation}: OnboardingScreenProps) {
-  const handleGetStarted = () => {
+  const handleGetStarted = async () => {
+    await completeOnboarding();
     navigation.replace('ImagePicker');
   };
 
