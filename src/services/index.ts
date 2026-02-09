@@ -37,6 +37,7 @@ export {
   isSchedulerSupported,
   enableScreenWakeMode,
   disableScreenWakeMode,
+  setTextAppearance,
   type UpdateInterval,
   type SchedulerConfig,
   type SchedulerStatus,

@@ -207,4 +207,21 @@ class SchedulerModule(reactContext: ReactApplicationContext) : ReactContextBaseJ
             promise.reject("SCHEDULER_ERROR", e.message, e)
         }
     }
+
+    @ReactMethod
+    fun setTextAppearance(color: String, sizeMultiplier: Double, promise: Promise) {
+        try {
+            val prefs = reactApplicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit()
+                .putString(VocabWallpaperWorker.KEY_TEXT_COLOR, color)
+                .putFloat(VocabWallpaperWorker.KEY_FONT_SIZE_MULTIPLIER, sizeMultiplier.toFloat())
+                .apply()
+
+            android.util.Log.d("SchedulerModule", "Text appearance set: color=$color, size=$sizeMultiplier")
+            promise.resolve(true)
+        } catch (e: Exception) {
+            android.util.Log.e("SchedulerModule", "Error setting text appearance", e)
+            promise.reject("SCHEDULER_ERROR", e.message, e)
+        }
+    }
 }

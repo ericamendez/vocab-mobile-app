@@ -12,7 +12,6 @@ import com.google.gson.reflect.TypeToken
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
-import kotlin.random.Random
 
 data class VocabWord(
     val word: String,
@@ -39,6 +38,8 @@ class VocabWallpaperWorker(
         const val KEY_CURRENT_INDEX = "current_index"
         const val KEY_VOCAB_WORDS = "vocab_words"
         const val KEY_VOCAB_INDEX = "vocab_index"
+        const val KEY_TEXT_COLOR = "text_color"
+        const val KEY_FONT_SIZE_MULTIPLIER = "font_size_multiplier"
     }
 
     private val gson = Gson()
@@ -81,8 +82,12 @@ class VocabWallpaperWorker(
             }
             val vocabWord = vocabWords[vocabIndex]
 
+            // Get text appearance settings
+            val textColor = prefs.getString(KEY_TEXT_COLOR, "#FFFFFF") ?: "#FFFFFF"
+            val fontSizeMultiplier = prefs.getFloat(KEY_FONT_SIZE_MULTIPLIER, 1.0f)
+
             // Render the wallpaper with vocab overlay
-            val wallpaperBitmap = renderWallpaper(imageUri, vocabWord)
+            val wallpaperBitmap = renderWallpaper(imageUri, vocabWord, textColor, fontSizeMultiplier)
             
             if (wallpaperBitmap != null) {
                 // Set as lock screen wallpaper
@@ -111,7 +116,12 @@ class VocabWallpaperWorker(
         }
     }
 
-    private fun renderWallpaper(imageUri: String, vocabWord: VocabWord): Bitmap? {
+    private fun renderWallpaper(
+        imageUri: String, 
+        vocabWord: VocabWord,
+        textColor: String,
+        fontSizeMultiplier: Float
+    ): Bitmap? {
         try {
             val inputStream: InputStream = when {
                 imageUri.startsWith("content://") -> {
@@ -143,6 +153,13 @@ class VocabWallpaperWorker(
             // Use smaller of width/height to scale text proportionally
             val scale = minOf(width, height)
 
+            // Parse the text color
+            val parsedTextColor = try {
+                Color.parseColor(textColor)
+            } catch (e: Exception) {
+                Color.WHITE
+            }
+
             // Draw semi-transparent background for text (lower portion of screen)
             val bgPaint = Paint().apply {
                 color = Color.parseColor("#CC000000") // 80% black for better readability
@@ -155,43 +172,50 @@ class VocabWallpaperWorker(
             // Padding from edges
             val paddingX = width * 0.04f
 
-            // Draw word - smaller font
+            // Base sizes (will be multiplied by fontSizeMultiplier)
+            val baseWordSize = scale * 0.05f
+            val basePosSize = scale * 0.025f
+            val baseDefSize = scale * 0.028f
+            val baseLineHeight = scale * 0.035f
+
+            // Draw word
             val wordPaint = Paint().apply {
-                color = Color.WHITE
-                textSize = scale * 0.05f  // Reduced from 0.08f
+                color = parsedTextColor
+                textSize = baseWordSize * fontSizeMultiplier
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 isAntiAlias = true
             }
-            var currentY = bgTop + scale * 0.06f
+            var currentY = bgTop + scale * 0.06f * fontSizeMultiplier
             canvas.drawText(vocabWord.word, paddingX, currentY, wordPaint)
 
             // Draw part of speech if available
             if (!vocabWord.partOfSpeech.isNullOrEmpty()) {
                 val posPaint = Paint().apply {
-                    color = Color.parseColor("#CCCCCC")
-                    textSize = scale * 0.025f  // Reduced from 0.04f
+                    // Slightly dimmer version of text color for part of speech
+                    color = adjustColorAlpha(parsedTextColor, 0.7f)
+                    textSize = basePosSize * fontSizeMultiplier
                     typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
                     isAntiAlias = true
                 }
-                currentY += scale * 0.035f
+                currentY += scale * 0.035f * fontSizeMultiplier
                 canvas.drawText("(${vocabWord.partOfSpeech})", paddingX, currentY, posPaint)
             }
 
             // Draw definition (wrapped to fit screen width)
             val defPaint = Paint().apply {
-                color = Color.WHITE
-                textSize = scale * 0.028f  // Reduced from 0.045f
+                color = parsedTextColor
+                textSize = baseDefSize * fontSizeMultiplier
                 isAntiAlias = true
             }
-            currentY += scale * 0.045f
+            currentY += scale * 0.045f * fontSizeMultiplier
             
             // Text wrapping with proper line height
             val maxWidth = width - (paddingX * 2)
-            val lineHeight = scale * 0.035f
+            val lineHeight = baseLineHeight * fontSizeMultiplier
             val words = vocabWord.definition.split(" ")
             var line = ""
             var linesDrawn = 0
-            val maxLines = 4  // Limit lines to prevent overflow
+            val maxLines = if (fontSizeMultiplier > 1.0f) 3 else 4  // Fewer lines for larger text
             
             for (word in words) {
                 val testLine = if (line.isEmpty()) word else "$line $word"
@@ -220,5 +244,13 @@ class VocabWallpaperWorker(
             Log.e(TAG, "Error rendering wallpaper", e)
             return null
         }
+    }
+
+    private fun adjustColorAlpha(color: Int, factor: Float): Int {
+        val alpha = (Color.alpha(color) * factor).toInt()
+        val red = Color.red(color)
+        val green = Color.green(color)
+        val blue = Color.blue(color)
+        return Color.argb(alpha, red, green, blue)
     }
 }

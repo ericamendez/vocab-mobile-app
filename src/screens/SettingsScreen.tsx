@@ -13,12 +13,14 @@ import type {RootStackParamList} from '../types';
 import {
   getSettings,
   setAutoUpdate,
+  saveSettings,
 } from '../store/settings';
 import {
   triggerWallpaperUpdate,
   isSchedulerSupported,
   setSchedulerImages,
   setSchedulerVocab,
+  setTextAppearance,
 } from '../services/schedulerService';
 import {getRandomWords} from '../services/vocabService';
 import type {UpdateInterval} from '../services/schedulerService';
@@ -27,11 +29,32 @@ type SettingsScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 };
 
+// Color options with display names
+const COLOR_OPTIONS = [
+  {value: '#FFFFFF', label: 'White'},
+  {value: '#FFD700', label: 'Gold'},
+  {value: '#00FFFF', label: 'Cyan'},
+  {value: '#FF69B4', label: 'Pink'},
+  {value: '#90EE90', label: 'Light Green'},
+  {value: '#FFA500', label: 'Orange'},
+];
+
+// Font size options (multiplier for base size)
+const FONT_SIZE_OPTIONS = [
+  {value: 0.7, label: 'Small'},
+  {value: 1.0, label: 'Medium'},
+  {value: 1.3, label: 'Large'},
+];
+
 export function SettingsScreen({navigation}: SettingsScreenProps) {
   const [autoUpdate, setAutoUpdateState] = useState(false);
   const [updateFrequency, setUpdateFrequency] = useState<UpdateInterval>('hourly');
+  const [textColor, setTextColor] = useState('#FFFFFF');
+  const [fontSize, setFontSize] = useState(1.0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showSizePicker, setShowSizePicker] = useState(false);
 
   // Load settings on mount
   useEffect(() => {
@@ -43,6 +66,8 @@ export function SettingsScreen({navigation}: SettingsScreenProps) {
       const settings = await getSettings();
       setAutoUpdateState(settings.autoUpdateEnabled);
       setUpdateFrequency(settings.updateFrequency);
+      setTextColor(settings.textColor || '#FFFFFF');
+      setFontSize(settings.fontSize || 1.0);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -87,6 +112,28 @@ export function SettingsScreen({navigation}: SettingsScreenProps) {
     }
   }, [autoUpdate, updateFrequency]);
 
+  const handleColorChange = useCallback(async (color: string) => {
+    setTextColor(color);
+    setShowColorPicker(false);
+    try {
+      await saveSettings({textColor: color});
+      await setTextAppearance(color, fontSize);
+    } catch (error) {
+      console.error('Error saving color:', error);
+    }
+  }, [fontSize]);
+
+  const handleFontSizeChange = useCallback(async (size: number) => {
+    setFontSize(size);
+    setShowSizePicker(false);
+    try {
+      await saveSettings({fontSize: size});
+      await setTextAppearance(textColor, size);
+    } catch (error) {
+      console.error('Error saving font size:', error);
+    }
+  }, [textColor]);
+
   const handleTestNow = useCallback(async () => {
     setIsSaving(true);
     try {
@@ -104,6 +151,9 @@ export function SettingsScreen({navigation}: SettingsScreenProps) {
       // Sync vocab words to native scheduler
       const words = await getRandomWords(50);
       await setSchedulerVocab(words);
+
+      // Sync text appearance
+      await setTextAppearance(textColor, fontSize);
       
       // Now trigger the update
       const success = await triggerWallpaperUpdate();
@@ -118,10 +168,18 @@ export function SettingsScreen({navigation}: SettingsScreenProps) {
     } finally {
       setIsSaving(false);
     }
-  }, []);
+  }, [textColor, fontSize]);
 
   const handleBack = () => {
     navigation.goBack();
+  };
+
+  const getColorLabel = (value: string) => {
+    return COLOR_OPTIONS.find(c => c.value === value)?.label || 'White';
+  };
+
+  const getFontSizeLabel = (value: number) => {
+    return FONT_SIZE_OPTIONS.find(s => s.value === value)?.label || 'Medium';
   };
 
   if (isLoading) {
@@ -240,20 +298,75 @@ export function SettingsScreen({navigation}: SettingsScreenProps) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Text Appearance</Text>
-          <TouchableOpacity style={styles.settingRow} testID="text-color-option">
+          
+          <TouchableOpacity 
+            style={styles.settingRow} 
+            testID="text-color-option"
+            onPress={() => setShowColorPicker(!showColorPicker)}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingLabel}>Text Color</Text>
-              <Text style={styles.settingDescription}>White</Text>
+              <View style={styles.colorPreview}>
+                <View style={[styles.colorDot, {backgroundColor: textColor}]} />
+                <Text style={styles.settingDescription}>{getColorLabel(textColor)}</Text>
+              </View>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Text style={styles.chevron}>{showColorPicker ? '▼' : '›'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.settingRow} testID="font-size-option">
+
+          {showColorPicker && (
+            <View style={styles.optionGrid}>
+              {COLOR_OPTIONS.map(color => (
+                <TouchableOpacity
+                  key={color.value}
+                  style={[
+                    styles.colorOption,
+                    textColor === color.value && styles.colorOptionActive,
+                  ]}
+                  onPress={() => handleColorChange(color.value)}>
+                  <View style={[styles.colorSwatch, {backgroundColor: color.value}]} />
+                  <Text style={[
+                    styles.colorLabel,
+                    textColor === color.value && styles.colorLabelActive,
+                  ]}>
+                    {color.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          <TouchableOpacity 
+            style={styles.settingRow} 
+            testID="font-size-option"
+            onPress={() => setShowSizePicker(!showSizePicker)}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingLabel}>Font Size</Text>
-              <Text style={styles.settingDescription}>Medium</Text>
+              <Text style={styles.settingDescription}>{getFontSizeLabel(fontSize)}</Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Text style={styles.chevron}>{showSizePicker ? '▼' : '›'}</Text>
           </TouchableOpacity>
+
+          {showSizePicker && (
+            <View style={styles.sizeContainer}>
+              {FONT_SIZE_OPTIONS.map(size => (
+                <TouchableOpacity
+                  key={size.value}
+                  style={[
+                    styles.sizeOption,
+                    fontSize === size.value && styles.sizeOptionActive,
+                  ]}
+                  onPress={() => handleFontSizeChange(size.value)}>
+                  <Text style={[
+                    styles.sizeLabel,
+                    fontSize === size.value && styles.sizeLabelActive,
+                    {fontSize: 14 * size.value},
+                  ]}>
+                    {size.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -340,7 +453,7 @@ const styles = StyleSheet.create({
     color: '#a0a0a0',
   },
   chevron: {
-    fontSize: 24,
+    fontSize: 20,
     color: '#a0a0a0',
   },
   frequencyLabel: {
@@ -396,5 +509,74 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#ff6b6b',
     marginTop: 4,
+  },
+  colorPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  colorDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  optionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  colorOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2a2a4e',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  colorOptionActive: {
+    backgroundColor: '#4a90d9',
+  },
+  colorSwatch: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  colorLabel: {
+    fontSize: 14,
+    color: '#a0a0a0',
+  },
+  colorLabelActive: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  sizeContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  sizeOption: {
+    flex: 1,
+    backgroundColor: '#2a2a4e',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  sizeOptionActive: {
+    backgroundColor: '#4a90d9',
+  },
+  sizeLabel: {
+    color: '#a0a0a0',
+  },
+  sizeLabelActive: {
+    color: '#ffffff',
+    fontWeight: '600',
   },
 });

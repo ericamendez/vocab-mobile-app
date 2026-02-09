@@ -148,3 +148,20 @@ export async function disableScreenWakeMode(): Promise<boolean> {
     return false;
   }
 }
+
+export async function setTextAppearance(
+  color: string,
+  sizeMultiplier: number,
+): Promise<boolean> {
+  if (Platform.OS !== 'android' || !SchedulerModule) {
+    return false;
+  }
+
+  try {
+    await SchedulerModule.setTextAppearance(color, sizeMultiplier);
+    return true;
+  } catch (error) {
+    console.error('Failed to set text appearance:', error);
+    return false;
+  }
+}
