@@ -2,7 +2,7 @@
 
 **Learn something new every time you check your phone.**
 
-An Android app that dynamically updates your lock screen wallpaper with vocabulary words and definitions. Choose your favorite photos, and LockNLearn overlays educational content. Turn every glance at your phone into a learning opportunity.
+An Android app that dynamically updates your lock screen wallpaper with vocabulary words and definitions. Choose your favorite photos, and LockNLearn overlays with educational content. No need to remember to open an app, turn every glance at your phone into a learning opportunity.
 
 ## Lock Screen View
 ![Lockscreen screenshots](assets/lockscreen.png)
